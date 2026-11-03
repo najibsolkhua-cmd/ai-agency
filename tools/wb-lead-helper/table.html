@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>WB Lead Helper — таблица</title>
+  <style>
+    body { font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; margin: 24px; color: #2b1a12; background: #faf6f0; }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    .bar { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0; }
+    button { padding: 9px 16px; border: 0; border-radius: 9px; background: #2b1a12; color: #f2e8da; font-weight: 600; cursor: pointer; }
+    button.ghost { background: transparent; color: #2b1a12; border: 1px solid #2b1a12; }
+    button.danger { background: #b42318; }
+    table { border-collapse: collapse; width: 100%; background: #fff; font-size: 12.5px; }
+    th, td { border: 1px solid #e6dccf; padding: 6px 8px; text-align: left; vertical-align: top; }
+    th { background: #2b1a12; color: #f2e8da; position: sticky; top: 0; }
+    td img { width: 54px; height: 72px; object-fit: cover; border-radius: 4px; }
+    .muted { color: #7a6656; }
+    h2 { font-size: 16px; margin: 28px 0 8px; }
+  </style>
+</head>
+<body>
+  <h1>WB Lead Helper</h1>
+  <div class="muted" id="summary"></div>
+  <div class="bar">
+    <button id="export">Скачать xlsx</button>
+    <button id="refresh" class="ghost">Обновить</button>
+    <button id="clearTargets" class="ghost">Очистить список брендов</button>
+    <button id="clearAll" class="danger">Удалить все данные</button>
+  </div>
+  <h2>Продавцы</h2>
+  <div id="rows"></div>
+  <h2>Бренды для обхода (собраны с поиска)</h2>
+  <div id="targets"></div>
+  <script src="lib/xlsx.full.min.js"></script>
+  <script src="table.js"></script>
+</body>
+</html>
