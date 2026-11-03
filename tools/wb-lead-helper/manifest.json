@@ -1,20 +1,23 @@
 {
   "manifest_version": 3,
   "name": "WB Lead Helper",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Сохраняет данные продавца с открытой страницы Wildberries в таблицу xlsx.",
-  "permissions": ["storage", "downloads", "activeTab"],
-  "host_permissions": ["https://www.wildberries.ru/*"],
+  "permissions": ["storage", "downloads", "activeTab", "scripting"],
+  "host_permissions": ["https://*.wildberries.ru/*", "https://wildberries.ru/*"],
   "background": { "service_worker": "background.js" },
   "content_scripts": [
     {
-      "matches": ["https://www.wildberries.ru/*"],
+      "matches": ["https://*.wildberries.ru/*", "https://wildberries.ru/*"],
       "js": ["content.js"],
       "css": ["content.css"],
       "run_at": "document_idle"
     }
   ],
-  "action": { "default_title": "WB Lead Helper: сохранить продавца со скриншотом" },
+  "action": {
+    "default_title": "WB Lead Helper",
+    "default_popup": "popup.html"
+  },
   "commands": {
     "save-seller": {
       "suggested_key": { "default": "Alt+Shift+S" },

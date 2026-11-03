@@ -1,15 +1,23 @@
-// Service worker: screenshots, downloads and opening the table page.
+// Service worker: screenshots, downloads, injection fallback and the table page.
 
-function saveWithShot(tab) {
-  if (!tab || !tab.id || !/^https:\/\/www\.wildberries\.ru\//.test(tab.url || '')) return;
-  chrome.tabs.sendMessage(tab.id, { type: 'save', withShot: true }).catch(() => {});
+const WB = /^https:\/\/([a-z0-9-]+\.)?wildberries\.ru\//i;
+
+// Make sure the content script is running in the tab (it is missing in tabs
+// that were already open when the extension was installed or updated).
+async function ensureContent(tabId) {
+  try {
+    const r = await chrome.tabs.sendMessage(tabId, { type: 'ping' });
+    if (r && r.ok) return true;
+  } catch (_) { /* not injected yet */ }
+  await chrome.scripting.insertCSS({ target: { tabId }, files: ['content.css'] });
+  await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
+  return true;
 }
 
-// Clicking the toolbar icon or pressing the shortcut grants activeTab,
-// which is what allows captureVisibleTab below.
-chrome.action.onClicked.addListener(saveWithShot);
-chrome.commands.onCommand.addListener((command, tab) => {
-  if (command === 'save-seller') saveWithShot(tab);
+chrome.commands.onCommand.addListener(async (command, tab) => {
+  if (command !== 'save-seller' || !tab || !WB.test(tab.url || '')) return;
+  await ensureContent(tab.id);
+  chrome.tabs.sendMessage(tab.id, { type: 'save', withShot: true }).catch(() => {});
 });
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -23,6 +31,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'download') {
     chrome.downloads
       .download({ url: msg.url, filename: msg.filename, conflictAction: 'uniquify', saveAs: false })
+      .then(() => sendResponse({ ok: true }))
+      .catch((e) => sendResponse({ ok: false, error: String(e) }));
+    return true;
+  }
+  if (msg.type === 'ensure') {
+    ensureContent(msg.tabId)
       .then(() => sendResponse({ ok: true }))
       .catch((e) => sendResponse({ ok: false, error: String(e) }));
     return true;

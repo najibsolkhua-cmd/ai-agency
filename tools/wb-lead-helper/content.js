@@ -70,6 +70,10 @@
     return;
   }
 
+  // Do not run twice when the popup injects the script into an open tab.
+  if (window.__wblhLoaded) return;
+  window.__wblhLoaded = true;
+
   // ---------- helpers ----------
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -273,7 +277,7 @@
     if (!panel) {
       panel = document.createElement('div');
       panel.id = 'wblh-panel';
-      document.documentElement.appendChild(panel);
+      (document.body || document.documentElement).appendChild(panel);
     }
     const { rows, targets } = await loadData();
     const btns = [];
@@ -285,7 +289,7 @@
       <b>WB Lead Helper</b>
       <div class="wblh-count">Продавцов: ${Object.keys(rows).length} · Брендов к обходу: ${Object.keys(targets).length}</div>
       ${btns.join('')}
-      <div class="wblh-hint">Со скриншотом: значок расширения или Alt+Shift+S</div>`;
+      <div class="wblh-hint">Со скриншотом: значок расширения → «Сохранить продавца + скриншот» или Alt+Shift+S</div>`;
   }
 
   document.addEventListener('click', (e) => {
@@ -299,16 +303,26 @@
     if (act === 'min') document.getElementById('wblh-panel').classList.toggle('wblh-collapsed');
   }, true);
 
-  chrome.runtime.onMessage.addListener((msg) => {
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    if (msg.type === 'ping') {
+      sendResponse({ ok: true, page: isSellerPage() ? 'seller' : isSearchPage() ? 'search' : 'other' });
+      return false;
+    }
     if (msg.type === 'save') saveSeller(Boolean(msg.withShot));
+    if (msg.type === 'collect') collectFromSearch();
+    sendResponse({ ok: true });
+    return false;
   });
 
-  // WB is a single-page app: re-render the panel when the URL changes.
+  // WB is a single-page app: re-render the panel when the URL changes,
+  // and put it back if the site's own scripts remove it.
   let lastUrl = '';
   setInterval(() => {
     if (location.href !== lastUrl) {
       lastUrl = location.href;
       pendingSave = null;
+      renderPanel();
+    } else if (!document.getElementById('wblh-panel')) {
       renderPanel();
     }
   }, 1000);

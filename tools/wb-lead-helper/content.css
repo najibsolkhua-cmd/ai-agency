@@ -1,5 +1,5 @@
 #wblh-panel {
-  position: fixed; left: 16px; bottom: 16px; z-index: 2147483647;
+  position: fixed; right: 16px; top: 160px; z-index: 2147483647;
   background: #2b1a12; color: #f2e8da; border-radius: 14px; padding: 12px 14px;
   font: 13px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   box-shadow: 0 8px 24px rgba(0, 0, 0, .25); width: 230px;

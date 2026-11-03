@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { width: 290px; margin: 0; padding: 14px; font: 13px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #2b1a12; color: #f2e8da; }
+    b { font-size: 15px; }
+    #status { margin: 8px 0 10px; padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,.08); }
+    #status.err { background: #7a1f16; }
+    #count { color: #e8c9a0; margin-bottom: 6px; }
+    button { display: block; width: 100%; margin-top: 7px; padding: 9px 10px; border: 0; border-radius: 9px; background: #e8c9a0; color: #2b1a12; font: 600 13px system-ui, sans-serif; cursor: pointer; }
+    button.ghost { background: transparent; color: #e8c9a0; border: 1px solid #e8c9a0; }
+    button[disabled] { opacity: .45; cursor: default; }
+    .hint { margin-top: 10px; font-size: 11px; color: #c9b8a4; }
+  </style>
+</head>
+<body>
+  <b>WB Lead Helper</b>
+  <div id="status">Проверяю страницу…</div>
+  <div id="count"></div>
+  <button id="save" disabled>Сохранить продавца + скриншот</button>
+  <button id="collect" disabled>Собрать бренды с поиска</button>
+  <button id="table" class="ghost">Таблица и выгрузка xlsx</button>
+  <div class="hint">Панель с кнопками также есть на самой странице WB, справа.</div>
+  <script src="popup.js"></script>
+</body>
+</html>
