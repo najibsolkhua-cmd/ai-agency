@@ -1,1 +1,6 @@
 leads/
+tools/mailer/journal.xlsx
+tools/mailer/state.ini
+tools/mailer/stoplist.txt
+tools/mailer/preview/
+tools/mailer/wb-leads-*.xlsx
