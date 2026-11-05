@@ -223,7 +223,7 @@ LAST_SEEN = [time.time()]
 
 def open_path(what):
     targets = {"journal": HERE / "journal.xlsx", "photos": HERE / "photos", "folder": HERE,
-               "stoplist": M.STOPLIST, "reply": HERE / "ОТВЕТ_с_примерами.txt"}
+               "stoplist": M.STOPLIST, "reply": reply_file()}
     p = targets.get(what)
     if p is None:
         return "Неизвестный объект."
@@ -255,8 +255,15 @@ def make_shortcut():
     return "" if r.returncode == 0 else (r.stderr or "Не удалось создать ярлык.")
 
 
+def reply_file():
+    for name in ("reply_template.txt", "ОТВЕТ_с_примерами.txt"):
+        if (HERE / name).exists():
+            return HERE / name
+    return HERE / "reply_template.txt"
+
+
 def reply_text():
-    p = HERE / "ОТВЕТ_с_примерами.txt"
+    p = reply_file()
     if not p.exists():
         return ""
     text = p.read_text(encoding="utf-8")
@@ -329,7 +336,7 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/upload":
                 if not raw.startswith(b"PK"):
                     return self._send(400, {"error": "Это не файл Excel (.xlsx)."})
-                dest = HERE / "wb-leads-загружено.xlsx"
+                dest = HERE / "wb-leads-uploaded.xlsx"
                 dest.write_bytes(raw)
                 save_config({"leads_file": dest.name})
                 return self._send(200, {"ok": True})
