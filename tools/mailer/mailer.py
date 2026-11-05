@@ -481,8 +481,20 @@ def main():
             say("В базе нет ни одного адреса.")
             return
         to = (args.test or c["email"]).strip()
+        if not EMAIL_RE.match(to):
+            say(f"Адрес «{to}» записан с ошибкой. Запустите снова и проверьте адрес (или просто нажмите Enter).")
+            return
         lead = dict(leads[0], email=to)
-        ok, err = send(c, build_message(c, lead, "letter.txt"))
+        try:
+            ok, err = send(c, build_message(c, lead, "letter.txt"))
+        except StopForToday as e:
+            remember_refusal(str(e))
+            say("\n!!! Почта не выпустила письмо:", e)
+            if "SPAM" in str(e).upper():
+                say("    Фильтр Яндекса посчитал письмо похожим на рекламу.")
+                say("    Что сделать: оставьте в letter.txt короткий текст без фото и цен, привяжите телефон")
+                say("    к аккаунту, отправьте вручную из браузера 3–5 обычных писем знакомым и повторите тест завтра.")
+            return
         say("Тестовое письмо отправлено на " + to if ok else "Ошибка: " + err)
         return
 
