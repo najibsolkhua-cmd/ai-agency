@@ -39,6 +39,7 @@ HERE = Path(__file__).resolve().parent
 JOURNAL = HERE / "journal.xlsx"
 STOPLIST = HERE / "stoplist.txt"
 STATE = HERE / "state.ini"
+STOP_FILE = HERE / "STOP"
 
 PRESETS = {
     "yandex": ("smtp.yandex.ru", 465, "ssl", "imap.yandex.ru"),
@@ -211,32 +212,19 @@ def remember_refusal(text):
         cfg.write(f)
 
 
-def report(c):
+def stats(c):
     j = load_journal()
     first = [r for r in j.values() if r["Письмо 1"]]
     n = len(first)
-    if not n:
-        say("Пока ничего не отправлено.")
-        return
     st = lambda s: sum(r["Статус"] == s for r in first)
     replied, refused, bounced = st("ответил"), st("отказ"), st("не доставлено")
-    follow = sum(bool(r["Напоминание"]) for r in first)
-    pct = lambda x: f"{x / n * 100:.1f}%"
     limit, day_no = daily_limit(c)
-    say("=" * 52)
-    say(f"Отправлено первых писем: {n}   напоминаний: {follow}")
-    say(f"Ответили: {replied} ({pct(replied)})   из них «нет»: {refused}")
-    say(f"Не доставлено (адрес не существует): {bounced} ({pct(bounced)})")
-    say(f"Ждут ответа: {st('отправлено')}")
-    say(f"День прогрева: {day_no + 1}, лимит сегодня: {limit}, отправлено сегодня: {sent_today(j)}")
-    say("-" * 52)
-    say("По дням (последние 7):")
+    days = []
     for k in range(6, -1, -1):
         d = (date.today() - timedelta(days=k)).isoformat()
-        a = sum(r["Письмо 1"].startswith(d) for r in first)
-        b = sum(r["Напоминание"].startswith(d) for r in first)
-        if a or b:
-            say(f"  {d}: писем {a}, напоминаний {b}")
+        days.append({"date": d,
+                     "first": sum(r["Письмо 1"].startswith(d) for r in first),
+                     "followup": sum(r["Напоминание"].startswith(d) for r in first)})
     cfg = configparser.ConfigParser(interpolation=None)
     if STATE.exists():
         cfg.read(STATE, encoding="utf-8")
@@ -244,7 +232,7 @@ def report(c):
     risk, why = 0, []
     if last and datetime.fromisoformat(last) > datetime.now() - timedelta(days=7):
         risk += 3
-        why.append(f"сервер отказывал в отправке {last[:10]}")
+        why.append(f"почта отказывала в отправке {last[:10]}")
     if n >= 20 and bounced / n > 0.05:
         risk += 2
         why.append("больше 5% адресов не существуют — чистите базу")
@@ -253,16 +241,42 @@ def report(c):
         why.append("2–5% адресов не существуют")
     if n >= 50 and replied / n < 0.01:
         risk += 1
-        why.append("почти никто не отвечает — письма могут уходить в спам, проверьте текст и тест на себя")
+        why.append("почти никто не отвечает — письма могут уходить в спам, сделайте тест на себя")
     if limit >= 50 and day_no < 28:
         risk += 1
         why.append("большой лимит для молодого ящика")
     level = "низкий" if risk == 0 else "средний" if risk <= 2 else "высокий"
+    return {
+        "sent": n, "followups": sum(bool(r["Напоминание"]) for r in first),
+        "replied": replied, "refused": refused, "bounced": bounced, "waiting": st("отправлено"),
+        "limit": limit, "day": day_no + 1, "today": sent_today(j), "days": days,
+        "risk": level, "why": why,
+    }
+
+
+def report(c):
+    s = stats(c)
+    n = s["sent"]
+    if not n:
+        say("Пока ничего не отправлено.")
+        return
+    pct = lambda x: f"{x / n * 100:.1f}%"
+    say("=" * 52)
+    say(f"Отправлено первых писем: {n}   напоминаний: {s['followups']}")
+    say(f"Ответили: {s['replied']} ({pct(s['replied'])})   из них «нет»: {s['refused']}")
+    say(f"Не доставлено (адрес не существует): {s['bounced']} ({pct(s['bounced'])})")
+    say(f"Ждут ответа: {s['waiting']}")
+    say(f"День прогрева: {s['day']}, лимит сегодня: {s['limit']}, отправлено сегодня: {s['today']}")
     say("-" * 52)
-    say(f"Риск блокировки (оценка программы): {level}")
-    for w in why:
+    say("По дням (последние 7):")
+    for d in s["days"]:
+        if d["first"] or d["followup"]:
+            say(f"  {d['date']}: писем {d['first']}, напоминаний {d['followup']}")
+    say("-" * 52)
+    say(f"Риск блокировки (оценка программы): {s['risk']}")
+    for w in s["why"]:
         say("  • " + w)
-    if level == "высокий":
+    if s["risk"] == "высокий":
         say("  Совет: 2–3 дня не отправлять, затем снизить max_per_day вдвое.")
     say("=" * 52)
 
@@ -440,6 +454,23 @@ def imap_check(c, j):
 
 # ---------------------------------------------------------------- main
 
+def build_queue(c, j, leads, stop):
+    """Follow-ups that are due first, then new addresses."""
+    follow_days = int(c.get("followup_after_days", "3") or 3)
+    queue = []
+    for rec in j.values():
+        if rec["Статус"] == "отправлено" and not rec["Напоминание"] and rec["Письмо 1"]:
+            if datetime.fromisoformat(rec["Письмо 1"]) <= datetime.now() - timedelta(days=follow_days):
+                if rec["Email"].lower() not in stop:
+                    queue.append(("followup", rec))
+    for lead in leads:
+        m = lead["email"]
+        if m in j or m in stop or not EMAIL_RE.match(m) or lead["lead_status"] in ("Отказ", "Не подходит"):
+            continue
+        queue.append(("first", lead))
+    return queue
+
+
 def within_hours(c):
     try:
         a, b = [int(x) for x in c.get("work_hours", "9-19").split("-")]
@@ -514,25 +545,14 @@ def main():
         say("На сегодня всё. Запустите завтра.")
         return
 
-    follow_days = int(c.get("followup_after_days", "3") or 3)
-    queue = []
-    for rec in j.values():
-        if rec["Статус"] == "отправлено" and not rec["Напоминание"] and rec["Письмо 1"]:
-            if datetime.fromisoformat(rec["Письмо 1"]) <= datetime.now() - timedelta(days=follow_days):
-                if rec["Email"].lower() not in stop:
-                    queue.append(("followup", rec))
-    for lead in leads:
-        m = lead["email"]
-        if m in j or m in stop or not EMAIL_RE.match(m) or lead["lead_status"] in ("Отказ", "Не подходит"):
-            continue
-        queue.append(("first", lead))
-    queue = queue[:left]
+    queue = build_queue(c, j, leads, stop)[:left]
     if not queue:
         say("Новых адресов нет. Выгрузите свежую таблицу из расширения.")
         return
 
+    STOP_FILE.unlink(missing_ok=True)
     dmin, dmax = int(c.get("delay_min_sec", "60") or 60), int(c.get("delay_max_sec", "240") or 240)
-    say(f"Отправлю: {len(queue)}. Пауза между письмами {dmin}–{dmax} сек. Остановить: Ctrl+C.\n")
+    say(f"Отправлю: {len(queue)}. Пауза между письмами {dmin}–{dmax} сек. Остановить: кнопка «Остановить» в приложении (или Ctrl+C).\n")
     try:
         for n, (kind, item) in enumerate(queue, 1):
             now = datetime.now().isoformat(timespec="minutes")
@@ -560,7 +580,14 @@ def main():
             save_journal(j)
             say(f"[{n}/{len(queue)}] {'✓' if ok else '✗'} {label}{'' if ok else ' — ' + err}")
             if n < len(queue):
-                time.sleep(random.randint(dmin, dmax))
+                pause = random.randint(dmin, dmax)
+                say(f"    пауза {pause} сек…")
+                for _ in range(pause):
+                    if STOP_FILE.exists():
+                        raise KeyboardInterrupt
+                    time.sleep(1)
+            if STOP_FILE.exists():
+                raise KeyboardInterrupt
     except StopForToday as e:
         save_journal(j)
         remember_refusal(str(e))
@@ -570,6 +597,7 @@ def main():
         return
     except KeyboardInterrupt:
         save_journal(j)
+        STOP_FILE.unlink(missing_ok=True)
         say("\nОстановлено. Журнал сохранён.")
         return
     say("\nГотово на сегодня. Журнал: journal.xlsx")

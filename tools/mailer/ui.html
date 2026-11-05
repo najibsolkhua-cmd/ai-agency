@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Рассылка селлерам</title>
+<style>
+  :root {
+    --bg: #f6f1ea; --card: #ffffff; --ink: #2b1a12; --muted: #7a6656; --line: #eadfd2;
+    --accent: #2b1a12; --accent-ink: #f6f1ea; --soft: #f2e6d7; --gold: #c9945f;
+    --ok: #1f7a45; --ok-bg: #e5f4ea; --warn: #9a5b00; --warn-bg: #fdf1dc; --bad: #b42318; --bad-bg: #fde8e6;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+  .app { display: grid; grid-template-columns: 230px 1fr; min-height: 100vh; }
+  nav { background: var(--ink); color: var(--accent-ink); padding: 22px 14px; display: flex; flex-direction: column; gap: 4px; }
+  nav .brand { font-weight: 700; font-size: 18px; padding: 0 10px 18px; line-height: 1.2; }
+  nav .brand small { display: block; font-weight: 400; font-size: 12px; color: #c9b8a4; margin-top: 4px; }
+  nav button { all: unset; cursor: pointer; padding: 10px 12px; border-radius: 10px; display: flex; gap: 10px; align-items: center; color: #e9dccd; }
+  nav button:hover { background: rgba(255,255,255,.07); }
+  nav button.active { background: var(--accent-ink); color: var(--ink); font-weight: 600; }
+  nav .num { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; background: rgba(255,255,255,.12); flex: none; }
+  nav button.active .num { background: var(--ink); color: var(--accent-ink); }
+  nav .num.done { background: var(--ok); color: #fff; }
+  nav .spacer { flex: 1; }
+  nav .small { font-size: 13px; color: #c9b8a4; }
+  main { padding: 28px 32px 60px; max-width: 1100px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 22px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; margin-bottom: 16px; }
+  .card h2 { font-size: 17px; margin: 0 0 12px; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .btn { all: unset; cursor: pointer; padding: 11px 18px; border-radius: 11px; background: var(--accent); color: var(--accent-ink); font-weight: 600; display: inline-flex; gap: 8px; align-items: center; }
+  .btn:hover { filter: brightness(1.15); }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--ink); padding: 9.5px 16px; }
+  .btn.soft { background: var(--soft); color: var(--ink); }
+  .btn.big { padding: 16px 26px; font-size: 17px; border-radius: 14px; }
+  .btn.danger { background: var(--bad); color: #fff; }
+  .btn[disabled] { opacity: .4; pointer-events: none; }
+  .check { display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .check:last-child { border-bottom: 0; }
+  .dot { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; }
+  .dot.ok { background: var(--ok-bg); color: var(--ok); }
+  .dot.todo { background: var(--warn-bg); color: var(--warn); }
+  .check b { display: block; }
+  .check span { color: var(--muted); font-size: 14px; }
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .tile { background: var(--soft); border-radius: 14px; padding: 14px 16px; }
+  .tile .v { font-size: 28px; font-weight: 700; line-height: 1.1; }
+  .tile .l { color: var(--muted); font-size: 13px; }
+  .chip { display: inline-block; padding: 4px 12px; border-radius: 999px; font-weight: 600; font-size: 13px; }
+  .chip.ok { background: var(--ok-bg); color: var(--ok); }
+  .chip.warn { background: var(--warn-bg); color: var(--warn); }
+  .chip.bad { background: var(--bad-bg); color: var(--bad); }
+  .today { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; }
+  .today .big-num { font-size: 40px; font-weight: 800; }
+  label { display: block; font-weight: 600; margin: 14px 0 6px; }
+  label small { font-weight: 400; color: var(--muted); }
+  input[type=text], input[type=email], input[type=password], input[type=number], textarea {
+    width: 100%; padding: 11px 13px; border: 1.5px solid var(--line); border-radius: 10px; font: inherit; color: var(--ink); background: #fff;
+  }
+  input:focus, textarea:focus { outline: none; border-color: var(--gold); }
+  textarea { min-height: 330px; resize: vertical; line-height: 1.5; }
+  .seg { display: inline-flex; background: var(--soft); border-radius: 11px; padding: 4px; }
+  .seg button { all: unset; cursor: pointer; padding: 8px 16px; border-radius: 8px; font-weight: 600; }
+  .seg button.on { background: var(--ink); color: var(--accent-ink); }
+  .help { background: var(--soft); border-radius: 12px; padding: 14px 16px; font-size: 14px; }
+  .help ol { margin: 6px 0 0; padding-left: 20px; }
+  .note { padding: 12px 14px; border-radius: 12px; font-size: 14px; }
+  .note.ok { background: var(--ok-bg); color: var(--ok); }
+  .note.warn { background: var(--warn-bg); color: var(--warn); }
+  .note.bad { background: var(--bad-bg); color: var(--bad); }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+  .chips button { all: unset; cursor: pointer; padding: 5px 11px; border-radius: 8px; background: var(--soft); font-size: 13px; font-weight: 600; }
+  .preview { background: #fbf8f4; border: 1px dashed var(--line); border-radius: 12px; padding: 16px; white-space: pre-wrap; font-size: 14px; min-height: 330px; }
+  .preview .subj { font-weight: 700; margin-bottom: 10px; }
+  pre.log { background: #1d130d; color: #f2e6d7; border-radius: 12px; padding: 14px; height: 340px; overflow: auto; white-space: pre-wrap; font: 13px/1.5 Consolas, ui-monospace, monospace; margin: 0; }
+  .bar { height: 10px; background: var(--soft); border-radius: 99px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--ok); transition: width .4s; }
+  .toast { position: fixed; right: 24px; bottom: 24px; background: var(--ink); color: var(--accent-ink); padding: 12px 18px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.25); display: none; max-width: 420px; }
+  .hidden { display: none !important; }
+  ul.why { margin: 8px 0 0; padding-left: 20px; color: var(--muted); font-size: 14px; }
+  @media (max-width: 900px) { .app { grid-template-columns: 1fr; } nav { flex-direction: row; flex-wrap: wrap; } nav .spacer { display: none; } .grid2, .tiles { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav>
+    <div class="brand">Рассылка селлерам<small>письма с вашей почты</small></div>
+    <button data-v="home" class="active"><span class="num">⌂</span>Главная</button>
+    <button data-v="mail"><span class="num" id="n-mail">1</span>Почта</button>
+    <button data-v="base"><span class="num" id="n-base">2</span>База продавцов</button>
+    <button data-v="letter"><span class="num" id="n-letter">3</span>Текст письма</button>
+    <button data-v="test"><span class="num" id="n-test">4</span>Проверка</button>
+    <button data-v="send"><span class="num" id="n-send">5</span>Отправка</button>
+    <div class="spacer"></div>
+    <button id="mk-shortcut" class="small hidden">＋ Ярлык на рабочий стол</button>
+    <button id="quit" class="small">✕ Закрыть приложение</button>
+  </nav>
+
+  <main>
+    <!-- HOME -->
+    <section id="v-home">
+      <h1>Главная</h1>
+      <p class="sub">Пройдите шаги по порядку. Когда все отмечены галочкой — нажмите «Отправить письма на сегодня».</p>
+
+      <div class="card today">
+        <div>
+          <div class="sub" style="margin:0">Сегодня можно отправить</div>
+          <div class="big-num" id="h-will">—</div>
+          <div id="h-plan" class="sub" style="margin:0"></div>
+        </div>
+        <button class="btn big" id="h-send">▶ Отправить письма на сегодня</button>
+      </div>
+      <div id="h-why-not" class="note warn hidden" style="margin:-6px 0 16px"></div>
+
+      <div class="card">
+        <h2>Подготовка</h2>
+        <div class="check"><div class="dot" id="c-mail-d">1</div><div><b>Почта</b><span id="c-mail"></span></div><button class="btn soft" data-go="mail">Настроить</button></div>
+        <div class="check"><div class="dot" id="c-base-d">2</div><div><b>База продавцов</b><span id="c-base"></span></div><button class="btn soft" data-go="base">Изменить</button></div>
+        <div class="check"><div class="dot ok">✓</div><div><b>Текст письма</b><span>Можно поменять в любой момент</span></div><button class="btn soft" data-go="letter">Открыть</button></div>
+        <div class="check"><div class="dot" id="c-test-d">4</div><div><b>Тестовое письмо себе</b><span id="c-test"></span></div><button class="btn soft" data-go="test">Проверить</button></div>
+      </div>
+
+      <div class="card">
+        <div class="row" style="justify-content:space-between">
+          <h2 style="margin:0">Статистика</h2>
+          <div>Риск блокировки: <span class="chip" id="s-risk">—</span></div>
+        </div>
+        <div class="tiles" style="margin-top:14px">
+          <div class="tile"><div class="v" id="s-sent">0</div><div class="l">отправлено писем</div></div>
+          <div class="tile"><div class="v" id="s-replied">0</div><div class="l">ответили</div></div>
+          <div class="tile"><div class="v" id="s-waiting">0</div><div class="l">ждут ответа</div></div>
+          <div class="tile"><div class="v" id="s-bounced">0</div><div class="l">адрес не существует</div></div>
+        </div>
+        <ul class="why" id="s-why"></ul>
+        <div class="row" style="margin-top:16px">
+          <button class="btn ghost" data-open="journal">📒 Журнал (Excel)</button>
+          <button class="btn ghost" id="copy-reply">📋 Скопировать ответ с примерами</button>
+          <button class="btn ghost" data-open="photos">🖼 Папка с фото</button>
+          <button class="btn ghost" data-open="stoplist">🚫 Стоп-лист</button>
+        </div>
+        <p class="sub" style="margin:12px 0 0;font-size:13px">Кто ответил — программа видит сама и не шлёт ему напоминание. Ответившим «нет» поставьте в журнале статус <b>отказ</b>.</p>
+      </div>
+    </section>
+
+    <!-- MAIL -->
+    <section id="v-mail" class="hidden">
+      <h1>1. Почта</h1>
+      <p class="sub">С какого ящика отправлять письма. Пароль хранится только на этом компьютере.</p>
+      <div class="grid2">
+        <div class="card">
+          <label>Почтовый сервис</label>
+          <div class="seg" id="f-provider"><button data-p="yandex">Яндекс</button><button data-p="mailru">Mail.ru</button></div>
+          <label>Адрес почты</label>
+          <input type="email" id="f-email" placeholder="name@yandex.ru">
+          <label>Пароль приложения <small>— не обычный пароль от почты</small></label>
+          <div class="row" style="flex-wrap:nowrap"><input type="password" id="f-pass"><button class="btn soft" id="f-pass-show" type="button">👁</button></div>
+          <label>Ваше имя <small>— для подписи в письме</small></label>
+          <input type="text" id="f-name" placeholder="Например: Наджиб">
+          <label>Telegram</label>
+          <input type="text" id="f-tg" placeholder="https://t.me/ваш_ник">
+          <label>Писем в день после прогрева <small>(5–100)</small></label>
+          <input type="number" id="f-max" min="5" max="100" step="5">
+          <div style="margin-top:18px"><button class="btn" id="f-save">💾 Сохранить</button></div>
+        </div>
+        <div class="card">
+          <h2>Как получить пароль приложения</h2>
+          <div class="help" id="help-yandex">
+            <ol>
+              <li>Почта Яндекса → ⚙️ <b>Все настройки</b> → <b>Почтовые программы</b>: включите IMAP и «Пароли приложений».</li>
+              <li>Нажмите кнопку ниже → <b>Создать пароль</b> → тип <b>Почта</b> → название «Рассылка».</li>
+              <li>Скопируйте пароль из 16 букв и вставьте слева.</li>
+            </ol>
+            <div style="margin-top:12px"><a class="btn soft" href="https://id.yandex.ru/security/app-passwords" target="_blank" rel="noopener">Открыть пароли приложений Яндекса ↗</a></div>
+          </div>
+          <div class="help hidden" id="help-mailru">
+            <ol>
+              <li>Mail.ru → Настройки → <b>Безопасность</b> → <b>Пароли для внешних приложений</b>.</li>
+              <li>Создайте пароль с доступом к почте (IMAP/SMTP).</li>
+              <li>Скопируйте его и вставьте слева.</li>
+            </ol>
+            <div style="margin-top:12px"><a class="btn soft" href="https://account.mail.ru/user/2-step-auth/passwords/" target="_blank" rel="noopener">Открыть пароли Mail.ru ↗</a></div>
+          </div>
+          <h2 style="margin-top:20px">Прогрев</h2>
+          <p class="sub" style="margin:0">Чтобы почту не заблокировали, программа сама ограничивает число писем: 1-я неделя — 10 в день, 2-я — 20, 3-я — 35, дальше — число слева.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- BASE -->
+    <section id="v-base" class="hidden">
+      <h1>2. База продавцов</h1>
+      <p class="sub">Таблица из расширения WB Lead Helper (кнопка «Скачать xlsx»).</p>
+      <div class="card">
+        <div id="b-info"></div>
+        <div class="row" style="margin-top:16px">
+          <button class="btn" id="b-auto">🔄 Взять свежий файл из «Загрузок»</button>
+          <label class="btn ghost" style="margin:0">📂 Выбрать файл…<input type="file" id="b-file" accept=".xlsx" class="hidden"></label>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Как пополнить базу</h2>
+        <div class="help"><ol>
+          <li>На Wildberries откройте страницу продавца и нажмите на панели расширения «Сохранить продавца».</li>
+          <li>Когда наберёте несколько продавцов — «Таблица и выгрузка xlsx» → <b>«Скачать xlsx»</b>.</li>
+          <li>Вернитесь сюда и нажмите «Взять свежий файл из «Загрузок»». Тем, кому уже писали, повторно письмо не уйдёт.</li>
+        </ol></div>
+      </div>
+    </section>
+
+    <!-- LETTER -->
+    <section id="v-letter" class="hidden">
+      <h1>3. Текст письма</h1>
+      <p class="sub">Слева — шаблон, справа — как его увидит продавец. Слова в фигурных скобках программа подставит сама.</p>
+      <div class="grid2">
+        <div class="card">
+          <label style="margin-top:0">Тема</label>
+          <input type="text" id="l-subj">
+          <label>Текст</label>
+          <div class="chips">Вставить:
+            <button data-ins="{Компания}">Компания</button><button data-ins="{Магазин}">Магазин</button>
+            <button data-ins="{Имя}">Ваше имя</button><button data-ins="{Telegram}">Telegram</button>
+          </div>
+          <textarea id="l-body"></textarea>
+          <div class="row" style="margin-top:12px"><button class="btn" id="l-save">💾 Сохранить письмо</button></div>
+        </div>
+        <div class="card">
+          <h2>Так увидит <span id="l-who"></span></h2>
+          <div class="preview"><div class="subj" id="l-pv-subj"></div><div id="l-pv-body"></div></div>
+          <div class="note warn" style="margin-top:12px">Для первого письма лучше короткий текст <b>без фото и цен</b> — так почта не примет его за рекламу. Фото и цены отправляйте в ответ тем, кто откликнулся (кнопка «Скопировать ответ с примерами» на главной).</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TEST -->
+    <section id="v-test" class="hidden">
+      <h1>4. Проверка</h1>
+      <p class="sub">Отправьте письмо себе и посмотрите, как оно выглядит и не попало ли в «Спам».</p>
+      <div class="card">
+        <label style="margin-top:0">Куда отправить тест <small>— оставьте пустым, чтобы отправить на свою почту</small></label>
+        <div class="row" style="flex-wrap:nowrap"><input type="email" id="t-to"><button class="btn" id="t-send">✉ Отправить тест</button></div>
+        <div id="t-res" class="note hidden" style="margin-top:14px;white-space:pre-wrap"></div>
+      </div>
+      <div class="card">
+        <h2>Проверка на спам (бесплатно)</h2>
+        <div class="help"><ol>
+          <li>Откройте <a href="https://www.mail-tester.com" target="_blank" rel="noopener">mail-tester.com</a> и скопируйте показанный адрес.</li>
+          <li>Вставьте его выше и нажмите «Отправить тест».</li>
+          <li>Вернитесь на сайт и нажмите «Then check your score». Хорошо — от 8 из 10.</li>
+        </ol></div>
+      </div>
+    </section>
+
+    <!-- SEND -->
+    <section id="v-send" class="hidden">
+      <h1>5. Отправка</h1>
+      <p class="sub">Запускайте один раз в рабочий день. Не закрывайте эту страницу и не выключайте компьютер, пока идёт отправка.</p>
+      <div class="card">
+        <div class="row" style="justify-content:space-between">
+          <div><b id="x-title">Готово к отправке</b><div class="sub" style="margin:0" id="x-plan"></div></div>
+          <div class="row"><button class="btn big" id="x-start">▶ Начать отправку</button><button class="btn danger hidden" id="x-stop">■ Остановить</button></div>
+        </div>
+        <div class="bar" style="margin:16px 0 12px"><i id="x-bar"></i></div>
+        <pre class="log" id="x-log">Здесь появится ход отправки.</pre>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const TOKEN = "__TOKEN__";
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
+let S = null, provider = "yandex", logSince = 0, logTimer = null;
+
+async function api(path, body) {
+  const opt = body === undefined ? {} : { method: "POST", headers: { "X-Token": TOKEN },
+    body: body instanceof Blob ? body : JSON.stringify(body) };
+  if (body !== undefined && !(body instanceof Blob)) opt.headers["Content-Type"] = "application/json";
+  const r = await fetch(path, opt);
+  return r.json();
+}
+function toast(t, ms = 3200) { const el = $("#toast"); el.textContent = t; el.style.display = "block"; clearTimeout(el._t); el._t = setTimeout(() => el.style.display = "none", ms); }
+function show(v) {
+  $$("main > section").forEach((s) => s.classList.toggle("hidden", s.id !== "v-" + v));
+  $$("nav button[data-v]").forEach((b) => b.classList.toggle("active", b.dataset.v === v));
+  if (v === "letter") loadLetter();
+  if (v === "mail") fillMail();
+  window.scrollTo(0, 0);
+}
+$$("nav button[data-v]").forEach((b) => b.onclick = () => show(b.dataset.v));
+$$("[data-go]").forEach((b) => b.onclick = () => show(b.dataset.go));
+
+function lastTest() { try { return localStorage.getItem("lastTestOk") || ""; } catch (_) { return ""; } }
+function setLastTest(v) { try { localStorage.setItem("lastTestOk", v); } catch (_) {} }
+
+async function refresh() {
+  S = await api("/api/status");
+  const cfgOk = S.missing.length === 0, baseOk = S.leads.count > 0, testOk = !!lastTest();
+  const set = (id, ok, n) => { const d = $(id); d.className = "dot " + (ok ? "ok" : "todo"); d.textContent = ok ? "✓" : n; };
+  set("#c-mail-d", cfgOk, 1); set("#c-base-d", baseOk, 2); set("#c-test-d", testOk, 4);
+  $("#n-mail").classList.toggle("done", cfgOk); $("#n-base").classList.toggle("done", baseOk);
+  $("#n-letter").classList.add("done"); $("#n-test").classList.toggle("done", testOk);
+  $("#c-mail").textContent = cfgOk ? `${S.config.email} · ${S.config.your_name}` : "Нужно заполнить: " + S.missing.join(", ");
+  $("#c-base").textContent = baseOk ? `${S.leads.count} продавцов с почтой · файл ${S.leads.file}` : (S.leads.error || "Нет адресов");
+  $("#c-test").textContent = testOk ? "Последний тест прошёл: " + lastTest() : "Отправьте письмо себе перед первой рассылкой";
+
+  const p = S.plan;
+  $("#h-will").textContent = p.will_send + " " + plural(p.will_send, "письмо", "письма", "писем");
+  $("#h-plan").textContent = `Лимит сегодня ${p.limit} (день прогрева ${p.day}) · новых адресов в очереди: ${p.new}, напоминаний: ${p.followups}`;
+  const why = !cfgOk ? "Сначала заполните почту (шаг 1)." : !baseOk ? "Нет базы с адресами (шаг 2)." :
+    !p.within_hours ? `Сейчас нерабочее время. Письма отправляются с ${S.config.work_hours.replace("-", " до ")} часов.` :
+    p.left === 0 ? "Дневной лимит уже отправлен — продолжайте завтра." :
+    p.will_send === 0 ? "Новых адресов нет — добавьте продавцов в расширении и обновите базу." : "";
+  $("#h-why-not").textContent = why; $("#h-why-not").classList.toggle("hidden", !why || S.running);
+  $("#h-send").disabled = !!why && !S.running;
+  $("#h-send").textContent = S.running ? "Идёт отправка — открыть" : "▶ Отправить письма на сегодня";
+  $("#x-start").disabled = !!why || S.running;
+  $("#x-plan").textContent = why || `Будет отправлено: ${p.will_send}. Пауза между письмами 1–4 минуты — займёт около ${Math.max(1, Math.round(p.will_send * 2.5))} мин.`;
+
+  const st = S.stats, pct = st.sent ? Math.round(st.replied / st.sent * 100) : 0;
+  $("#s-sent").textContent = st.sent; $("#s-replied").textContent = `${st.replied}${st.sent ? " · " + pct + "%" : ""}`;
+  $("#s-waiting").textContent = st.waiting; $("#s-bounced").textContent = st.bounced;
+  const r = $("#s-risk"); r.textContent = st.risk; r.className = "chip " + (st.risk === "низкий" ? "ok" : st.risk === "средний" ? "warn" : "bad");
+  $("#s-why").innerHTML = st.why.map((w) => `<li>${esc(w)}</li>`).join("");
+
+  $("#b-info").innerHTML = S.leads.file
+    ? `<div class="note ${baseOk ? "ok" : "warn"}"><b>${esc(S.leads.file)}</b> — продавцов с почтой: <b>${S.leads.count}</b>${S.leads.modified ? " · обновлён " + esc(S.leads.modified) : ""}</div>`
+    : `<div class="note warn">${esc(S.leads.error)}</div>`;
+  $("#mk-shortcut").classList.toggle("hidden", !S.is_windows);
+  if (S.running && !logTimer) pollLog();
+}
+function plural(n, a, b, c) { n = Math.abs(n) % 100; const m = n % 10; return n > 10 && n < 20 ? c : m > 1 && m < 5 ? b : m === 1 ? a : c; }
+function esc(s) { return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+// ---- mail
+function fillMail() {
+  if (!S) return;
+  const c = S.config; setProvider(c.provider);
+  $("#f-email").value = c.email; $("#f-name").value = c.your_name; $("#f-tg").value = c.telegram; $("#f-max").value = c.max_per_day;
+  $("#f-pass").value = ""; $("#f-pass").placeholder = c.has_password ? "Пароль сохранён — оставьте пустым, чтобы не менять" : "Вставьте пароль приложения";
+}
+function setProvider(p) { provider = p; $$("#f-provider button").forEach((b) => b.classList.toggle("on", b.dataset.p === p)); $("#help-yandex").classList.toggle("hidden", p !== "yandex"); $("#help-mailru").classList.toggle("hidden", p !== "mailru"); }
+$$("#f-provider button").forEach((b) => b.onclick = () => setProvider(b.dataset.p));
+$("#f-pass-show").onclick = () => { const i = $("#f-pass"); i.type = i.type === "password" ? "text" : "password"; };
+$("#f-save").onclick = async () => {
+  const name = $("#f-name").value.trim(), email = $("#f-email").value.trim();
+  if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email)) return toast("Проверьте адрес почты.");
+  if (!name) return toast("Впишите имя — оно нужно для подписи.");
+  const body = { provider, email, your_name: name, from_name: `${name} — ИИ-фото для маркетплейсов`, telegram: $("#f-tg").value.trim(), max_per_day: $("#f-max").value || 50 };
+  const pw = $("#f-pass").value.replace(/\s+/g, ""); if (pw) body.app_password = pw;
+  await api("/api/config", body); await refresh(); fillMail(); toast("Сохранено ✓");
+};
+
+// ---- base
+$("#b-auto").onclick = async () => { await api("/api/leads/auto", {}); await refresh(); toast(S.leads.count ? `Найдено продавцов с почтой: ${S.leads.count}` : "Файл не найден в «Загрузках»."); };
+$("#b-file").onchange = async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = await api("/api/upload", f); e.target.value = "";
+  if (r.error) return toast(r.error);
+  await refresh(); toast(`Загружено. Продавцов с почтой: ${S.leads.count}`);
+};
+
+// ---- letter
+let pvTimer = null;
+async function loadLetter() {
+  const d = await api("/api/letter");
+  $("#l-subj").value = d.subject; $("#l-body").value = d.body; renderPreview(d.preview);
+}
+function renderPreview(p) { $("#l-who").textContent = p.company || p.to; $("#l-pv-subj").textContent = "Тема: " + p.subject; $("#l-pv-body").textContent = p.body; }
+function schedulePreview() { clearTimeout(pvTimer); pvTimer = setTimeout(async () => renderPreview(await api("/api/letter/preview", { subject: $("#l-subj").value, body: $("#l-body").value })), 350); }
+$("#l-subj").oninput = schedulePreview; $("#l-body").oninput = schedulePreview;
+$$("[data-ins]").forEach((b) => b.onclick = () => {
+  const t = $("#l-body"), s = t.selectionStart, e = t.selectionEnd;
+  t.value = t.value.slice(0, s) + b.dataset.ins + t.value.slice(e); t.focus(); t.selectionStart = t.selectionEnd = s + b.dataset.ins.length; schedulePreview();
+});
+$("#l-save").onclick = async () => {
+  if (!$("#l-subj").value.trim() || !$("#l-body").value.trim()) return toast("Тема и текст не должны быть пустыми.");
+  await api("/api/letter", { subject: $("#l-subj").value, body: $("#l-body").value }); toast("Письмо сохранено ✓");
+};
+
+// ---- test
+$("#t-send").onclick = async () => {
+  const btn = $("#t-send"), res = $("#t-res"); btn.disabled = true; btn.textContent = "Отправляю…";
+  res.className = "note"; res.textContent = "Подключаюсь к почте…"; res.classList.remove("hidden");
+  const r = await api("/api/test", { to: $("#t-to").value.trim() });
+  btn.disabled = false; btn.textContent = "✉ Отправить тест";
+  const out = (r.output || "").split("\n").filter((l) => !l.startsWith("База:")).join("\n");
+  res.className = "note " + (r.ok ? "ok" : "bad");
+  res.textContent = r.ok ? out + "\n\nОткройте почту и проверьте, что письмо во «Входящих», а не в «Спаме»." : out;
+  if (r.ok) { setLastTest(new Date().toLocaleString("ru-RU")); refresh(); }
+};
+
+// ---- send
+async function startSend() {
+  show("send");
+  const r = await api("/api/send", {});
+  if (!r.ok && !S.running) return toast("Не удалось начать отправку.");
+  logSince = 0; $("#x-log").textContent = ""; pollLog(); refresh();
+}
+$("#h-send").onclick = () => (S && S.running) ? show("send") : startSend();
+$("#x-start").onclick = startSend;
+$("#x-stop").onclick = async () => { await api("/api/stop", {}); toast("Останавливаю после текущего письма…"); };
+async function pollLog() {
+  clearTimeout(logTimer);
+  const d = await api("/api/log?since=" + logSince);
+  if (d.lines.length) {
+    const el = $("#x-log"); if (logSince === 0) el.textContent = "";
+    el.textContent += d.lines.join("\n") + "\n"; el.scrollTop = el.scrollHeight; logSince = d.total;
+    const m = [...el.textContent.matchAll(/\[(\d+)\/(\d+)\]/g)].pop();
+    if (m) $("#x-bar").style.width = (m[1] / m[2] * 100) + "%";
+  }
+  $("#x-stop").classList.toggle("hidden", !d.running);
+  $("#x-title").textContent = d.running ? "Идёт отправка…" : (d.total ? "Отправка завершена" : "Готово к отправке");
+  if (d.running) logTimer = setTimeout(pollLog, 1500);
+  else { logTimer = null; if (d.total) refresh(); }
+}
+
+// ---- misc
+$$("[data-open]").forEach((b) => b.onclick = async () => { const r = await api("/api/open", { what: b.dataset.open }); if (r.error) toast(r.error); });
+$("#copy-reply").onclick = async () => {
+  const r = await api("/api/reply"); if (!r.text) return toast("Файл с ответом не найден.");
+  try { await navigator.clipboard.writeText(r.text); toast("Текст ответа скопирован — вставьте его в письмо и приложите фото."); }
+  catch (_) { prompt("Скопируйте текст:", r.text); }
+};
+$("#mk-shortcut").onclick = async () => { const r = await api("/api/shortcut", {}); toast(r.error || "Ярлык «Рассылка селлерам» появился на рабочем столе ✓"); };
+$("#quit").onclick = async () => { if (S && S.running && !confirm("Идёт отправка. Всё равно закрыть?")) return; await api("/api/quit", {}); document.body.innerHTML = '<div style="padding:60px;font:18px Segoe UI,sans-serif">Приложение закрыто. Эту вкладку можно закрыть.</div>'; };
+setInterval(() => api("/api/ping").catch(() => {}), 20000);
+setInterval(() => { if (!document.hidden && !$("#v-home").classList.contains("hidden")) refresh(); }, 15000);
+refresh().then(fillMail);
+</script>
+</body>
+</html>
