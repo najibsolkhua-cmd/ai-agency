@@ -57,7 +57,7 @@ def say(*a):
     print(*a, flush=True)
 
 
-def load_config():
+def load_config(strict=True):
     path = HERE / "config.ini"
     if not path.exists():
         say("Нет файла config.ini рядом с программой.")
@@ -74,7 +74,7 @@ def load_config():
         c["smtp_port"] = c.get("smtp_port") or str(port)
         c["security"] = c.get("security") or sec
         c["imap_host"] = c.get("imap_host") or imap
-    for key in ("email", "app_password", "smtp_host", "your_name", "from_name", "telegram"):
+    for key in ("email", "app_password", "smtp_host", "your_name", "from_name", "telegram") if strict else ():
         if not c.get(key) or "ВАШ" in c.get(key, "") or c.get(key) == "@ваш_ник":
             say(f"В config.ini не заполнено поле «{key}».")
             sys.exit(1)
@@ -197,6 +197,74 @@ def start_date():
         with open(STATE, "w", encoding="utf-8") as f:
             cfg.write(f)
     return date.fromisoformat(cfg.get("state", "start"))
+
+
+def remember_refusal(text):
+    cfg = configparser.ConfigParser(interpolation=None)
+    if STATE.exists():
+        cfg.read(STATE, encoding="utf-8")
+    if not cfg.has_section("state"):
+        cfg.add_section("state")
+    cfg.set("state", "last_refusal", datetime.now().isoformat(timespec="minutes"))
+    cfg.set("state", "last_refusal_text", text[:200].replace("%", "%%"))
+    with open(STATE, "w", encoding="utf-8") as f:
+        cfg.write(f)
+
+
+def report(c):
+    j = load_journal()
+    first = [r for r in j.values() if r["Письмо 1"]]
+    n = len(first)
+    if not n:
+        say("Пока ничего не отправлено.")
+        return
+    st = lambda s: sum(r["Статус"] == s for r in first)
+    replied, refused, bounced = st("ответил"), st("отказ"), st("не доставлено")
+    follow = sum(bool(r["Напоминание"]) for r in first)
+    pct = lambda x: f"{x / n * 100:.1f}%"
+    limit, day_no = daily_limit(c)
+    say("=" * 52)
+    say(f"Отправлено первых писем: {n}   напоминаний: {follow}")
+    say(f"Ответили: {replied} ({pct(replied)})   из них «нет»: {refused}")
+    say(f"Не доставлено (адрес не существует): {bounced} ({pct(bounced)})")
+    say(f"Ждут ответа: {st('отправлено')}")
+    say(f"День прогрева: {day_no + 1}, лимит сегодня: {limit}, отправлено сегодня: {sent_today(j)}")
+    say("-" * 52)
+    say("По дням (последние 7):")
+    for k in range(6, -1, -1):
+        d = (date.today() - timedelta(days=k)).isoformat()
+        a = sum(r["Письмо 1"].startswith(d) for r in first)
+        b = sum(r["Напоминание"].startswith(d) for r in first)
+        if a or b:
+            say(f"  {d}: писем {a}, напоминаний {b}")
+    cfg = configparser.ConfigParser(interpolation=None)
+    if STATE.exists():
+        cfg.read(STATE, encoding="utf-8")
+    last = cfg.get("state", "last_refusal", fallback="") if cfg.has_section("state") else ""
+    risk, why = 0, []
+    if last and datetime.fromisoformat(last) > datetime.now() - timedelta(days=7):
+        risk += 3
+        why.append(f"сервер отказывал в отправке {last[:10]}")
+    if n >= 20 and bounced / n > 0.05:
+        risk += 2
+        why.append("больше 5% адресов не существуют — чистите базу")
+    elif n >= 20 and bounced / n > 0.02:
+        risk += 1
+        why.append("2–5% адресов не существуют")
+    if n >= 50 and replied / n < 0.01:
+        risk += 1
+        why.append("почти никто не отвечает — письма могут уходить в спам, проверьте текст и тест на себя")
+    if limit >= 50 and day_no < 28:
+        risk += 1
+        why.append("большой лимит для молодого ящика")
+    level = "низкий" if risk == 0 else "средний" if risk <= 2 else "высокий"
+    say("-" * 52)
+    say(f"Риск блокировки (оценка программы): {level}")
+    for w in why:
+        say("  • " + w)
+    if level == "высокий":
+        say("  Совет: 2–3 дня не отправлять, затем снизить max_per_day вдвое.")
+    say("=" * 52)
 
 
 def daily_limit(c):
@@ -384,9 +452,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--preview", action="store_true")
     ap.add_argument("--test", action="store_true")
+    ap.add_argument("--report", action="store_true")
     args = ap.parse_args()
 
-    c = load_config()
+    c = load_config(strict=not args.report)
+    if args.report:
+        report(c)
+        return
     leads_path = find_leads_file(c)
     leads = read_leads(leads_path)
     say(f"База: {leads_path.name} — продавцов с почтой: {len(leads)}")
@@ -478,6 +550,7 @@ def main():
                 time.sleep(random.randint(dmin, dmax))
     except StopForToday as e:
         save_journal(j)
+        remember_refusal(str(e))
         say("\n!!! Почтовый сервер отказался принимать письма:", e)
         say("    Отправка остановлена до завтра. Не создавайте новые ящики — проверьте текст письма,")
         say("    уменьшите max_per_day в config.ini и посмотрите статистику в Яндекс Постмастере.")
