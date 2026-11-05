@@ -451,7 +451,7 @@ def within_hours(c):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--preview", action="store_true")
-    ap.add_argument("--test", action="store_true")
+    ap.add_argument("--test", nargs="?", const="", default=None, metavar="ADDRESS")
     ap.add_argument("--report", action="store_true")
     args = ap.parse_args()
 
@@ -476,13 +476,14 @@ def main():
         say(f"Готово: примеры писем в папке preview ({min(5, len(good))} шт.). Откройте .eml двойным щелчком.")
         return
 
-    if args.test:
+    if args.test is not None:
         if not leads:
             say("В базе нет ни одного адреса.")
             return
-        lead = dict(leads[0], email=c["email"])
+        to = (args.test or c["email"]).strip()
+        lead = dict(leads[0], email=to)
         ok, err = send(c, build_message(c, lead, "letter.txt"))
-        say("Тестовое письмо отправлено вам на " + c["email"] if ok else "Ошибка: " + err)
+        say("Тестовое письмо отправлено на " + to if ok else "Ошибка: " + err)
         return
 
     if not within_hours(c):
