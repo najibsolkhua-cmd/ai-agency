@@ -305,7 +305,7 @@ async function refresh() {
   $("#n-mail").classList.toggle("done", cfgOk); $("#n-base").classList.toggle("done", baseOk);
   $("#n-letter").classList.add("done"); $("#n-test").classList.toggle("done", testOk);
   $("#c-mail").textContent = cfgOk ? `${S.config.email} · ${S.config.your_name}` : "Нужно заполнить: " + S.missing.join(", ");
-  $("#c-base").textContent = baseOk ? `${S.leads.count} продавцов с почтой · файл ${S.leads.file}` : (S.leads.error || "Нет адресов");
+  $("#c-base").textContent = baseOk ? `${S.leads.count} продавцов с почтой, из них корпоративных: ${S.leads.corporate} · файл ${S.leads.file}` : (S.leads.error || "Нет адресов");
   $("#c-test").textContent = testOk ? "Последний тест прошёл: " + lastTest() : "Отправьте письмо себе перед первой рассылкой";
 
   const p = S.plan;
@@ -328,7 +328,7 @@ async function refresh() {
   $("#s-why").innerHTML = st.why.map((w) => `<li>${esc(w)}</li>`).join("");
 
   $("#b-info").innerHTML = S.leads.file
-    ? `<div class="note ${baseOk ? "ok" : "warn"}"><b>${esc(S.leads.file)}</b> — продавцов с почтой: <b>${S.leads.count}</b>${S.leads.modified ? " · обновлён " + esc(S.leads.modified) : ""}</div>`
+    ? `<div class="note ${baseOk ? "ok" : "warn"}"><b>${esc(S.leads.file)}</b> — продавцов с почтой: <b>${S.leads.count}</b>, из них корпоративных (им будем писать): <b>${S.leads.corporate}</b>${S.leads.modified ? " · обновлён " + esc(S.leads.modified) : ""}</div>`
     : `<div class="note warn">${esc(S.leads.error)}</div>`;
   $("#mk-shortcut").classList.toggle("hidden", !S.is_windows);
   if (S.running && !logTimer) pollLog();

@@ -114,7 +114,8 @@ def leads_info(c):
     except Exception as e:
         return None, {"file": path.name, "count": 0, "error": f"Не получилось прочитать таблицу: {e}"}
     good = [l for l in leads if M.EMAIL_RE.match(l["email"])]
-    return leads, {"file": path.name, "path": str(path), "count": len(good),
+    corp = [l for l in good if not M.FREE_MAIL.search(l["email"])]
+    return leads, {"file": path.name, "path": str(path), "count": len(good), "corporate": len(corp),
                    "modified": datetime.fromtimestamp(path.stat().st_mtime).strftime("%d.%m.%Y %H:%M"), "error": ""}
 
 

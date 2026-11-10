@@ -47,6 +47,7 @@ PRESETS = {
 }
 WARMUP = [(7, 10), (14, 20), (21, 35)]  # (days since start, letters per day)
 HARD_CAP = 100
+FREE_MAIL = re.compile(r"@(yandex|ya|mail|bk|list|inbox|internet|gmail|googlemail|rambler|icloud|me|outlook|hotmail|live|yahoo|proton|protonmail)\.", re.I)
 EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
 J_COLS = ["Email", "Компания", "Магазин", "ИНН", "Письмо 1", "Message-ID", "Напоминание", "Статус", "Ошибка", "Комментарий"]
 DONE_STATUSES = {"ответил", "отказ", "не доставлено"}
@@ -463,10 +464,13 @@ def build_queue(c, j, leads, stop):
             if datetime.fromisoformat(rec["Письмо 1"]) <= datetime.now() - timedelta(days=follow_days):
                 if rec["Email"].lower() not in stop:
                     queue.append(("followup", rec))
+    only_corp = c.get("only_corporate", "yes").lower() == "yes"
     for lead in leads:
         m = lead["email"]
         if m in j or m in stop or not EMAIL_RE.match(m) or lead["lead_status"] in ("Отказ", "Не подходит"):
             continue
+        if only_corp and FREE_MAIL.search(m):
+            continue  # personal mailbox of an individual — skip
         queue.append(("first", lead))
     return queue
 
